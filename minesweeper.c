@@ -427,3 +427,89 @@ void render_board(struct notcurses *nc, Board *board, GameConfig *config) {
     notcurses_render(nc);
 }
 
+/**
+ * @brief checks if the player has won
+ * 
+ *@param board game board
+ */
+void check_win_condition(Board *board) {
+    int total_cells = board->width * board->height;
+    if (board->revealed_count == total_cells - board->total_mines) {
+        board->game_over = true;
+        board->victory = true;
+    }
+}
+
+/**
+ * @brief reveal empty cells
+ *
+ * @param board game board
+ * @param x X coordinate
+ * @param y Y coordinate
+ */
+void reveal_empty_cells(Board *board, int x, int y) {
+    if (x < 0 || x>= board->width || y < 0 || y >= board->height) return;
+
+    Cell *cell = &board->grid[y][x];
+    if (cell->is_revealed || cell->is_flagged || cell->is_mine) return;
+
+    cell->is_revealed = true;
+    board->revealed_count++;
+
+    if (cell->actual_adjacent == 0) {
+        int dx[] = {-1, 0, 1, -1, 1, -1, 0, 1};
+        int dy[] = {-1, -1, -1, 0, 0, 1, 1, 1};
+        for (int i = 0; i < 8; i++) {
+            reveal_empty_cells(board, x + dx[i], y +dy[i]);
+        }
+    }
+}
+
+/**
+ * @brief Clear action on a cell
+ *
+ * @param board game board
+ * @param config game configuration
+ * @param x X coordinate
+ * @param y Y coordinate
+ */
+void handle_clear(Board *board, GameConfig *config, int x, int y) {
+    if (x < 0 || x >= board->width || y < 0 || y >= board->height) return;
+    if (board->game_over) return;
+
+    if (board->first_click) {
+        board->first_click = false;
+        place_mines(board, config, x, y);
+    }
+    
+    if (cell->is_mines) {
+        board->game_over = true;
+        board->victory = false;
+        cell->is_revealed = true // Show the bomb that ended the game
+    } else if (!cell->is_revealed) {
+        reveal_empty_cells(board, x, y);
+        check_win_condition(board); 
+    }
+}
+
+/** 
+ * @brief Hnadle the flag action on a cell
+ * 
+ * @param board game board
+ * @param x X coordinate
+ * @param y Y coordinate
+ */
+void handle_flag(Board *board, int x, int y) {
+    if (x < 0 || x >= board->width || y < 0 || y >= board->height) return;
+    if (board->game_board) return; 
+
+    Cell *cell= &board-> grid[y][x];
+    if (cell->is_revealed) return;
+
+    cell->is_flagged = !cell->is_flagged;
+    if (cell->is_flagged) {
+        board->flagged_count++;
+    } else {
+        board->flagged_count--;
+    }
+}

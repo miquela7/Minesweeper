@@ -6,3 +6,6 @@ May 3, 2026
 
 May 4, 2025
     I started writing my code. I worked on it for about 4 hours. I wrote what all my parameters would have to be for each game mode. I also added start up options for how to pick which game style the user wanted to play.
+
+May 5, 2025
+    Today I input the color codes for the different numbers to differentiate and add more color to the board. I also put in parameters for the first click function so that the first click was not on a mine and the surroundings weren't mines as well. As well I went through what would happen if the user won or lost, including the board showing where the mines were and which one ended the game. 
