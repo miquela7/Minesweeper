@@ -295,3 +295,135 @@ void calculate_adjacent_mines(Board *board, GameConfig *config) {
         }
     }
 }
+
+/**
+ * @brief Place mines on board randomly
+ *
+ * @param board Game board
+ * @param config Game Configuration
+ * @param first_click_x X coordinate of the first click
+ * @param first_click_y Y coordinate of the first click
+ */
+void place_mines(Board *board, GameConfig *confi, int first_click_x, int first_click_y) {
+    int mines_to_place = board->total_mines;
+
+    //Ensure the placement of mines on valid cells
+    int safe_cells = 9; //Max 9 cells around first click are safe
+    int max_mines = (board->width * board->height) - safe_cells;
+    if (mines_to_place > max_mines) {
+        mines_to_place = max_mines;
+        board->total_mines = max_mines;
+    }
+
+    while (mines_to_place > 0) {
+        int x = rand() % board->width;
+        int y = rand() % board->height;
+
+        //Ensure first click and surroundings are safe
+        if (abs(x - first_click_x) <= 1 && abs(y - first_click_y) <= 1) {
+            continue;
+        }
+
+        if (!board->grid[y][x].is_mines) {
+            board->grid[y][x].is_mine = true;
+            mines_to_place--;
+        }
+    }
+
+    calculate_adjacent_mines(board, config);
+}
+
+/**
+ * @brief Renders the game board to terminal
+ * 
+ * @param nc notcurses text
+ * @param board game board state
+ * @param config game configuration
+ */
+void render_board(struct notcurses *nc, Board *board, GameConfig *config) {
+    struct ncplane* stdn = notcurses_stdplane(nc);
+    ncplane_erase(stdn);
+
+    unsigned int dimy, dimx;
+    ncplane_dim_yx(stdn, &dimy, &dimx);
+
+    //Calculate centering offsets
+    int start_y = ((int)dimy - board->height) / 2;
+    int start_x = ((int)dimx - (board->width * 2)) / 2; // * 2, each cell is 2 chars wide
+
+    if (start_y < 2) start_y = 2;
+    if (start_x < 0) start_x = 0;
+
+    // Header
+    ncplane_printf_yx(stdn, start_y - 2, start_x, "Total Mines: %d | Remaining: %d",
+                      board->total_mines, board->total_mines - board->flagged_count);
+    
+    if (board->game_over) {
+        if (board->victory) {
+            ncplane_putstr_yx(stdn, start_y - 2, start_x + 40, "You Win!");
+        } else {
+            ncplane_putstr_yx(stdn, start_y - 2, start_x + 40, "Game Over!");
+        }
+    }
+
+    //Grid
+    for (int y = 0; y < board->height; y++) {
+        for (int x = 0; x < board->width; x++) {
+            Cell *cell = &board->grid[y][x];
+            int screen_y = start_y +y;
+            int screen_x = start_x + (x * 2);
+
+            uint32_t bg_color = 0x222222; // Dark grey default
+            if (config->variant == VARIANT_CHECKERBOARD) {
+                if ((x + y) % 2 == 0) {
+                    bg_color = 0x333333; // lighter grey
+                }
+            }
+            if (board->cursor_x == x && board->cursor_y == y) {
+                bg_color = 0x666666; // Highlight cursor
+            }
+
+            ncplane_set_bg_rgb(stdn, bg_color);
+
+            if (cell->is_revealed || (board->game_over && cell->is_mines)) {
+                if (cell->is_mine) {
+                    ncplane_set_fg_rgb(stdn, 0xFF0000); //Red bomb
+                    ncplane_printf_yx(stdn, screen_y, screen_x, " *");
+                } else if (cell->adjacent_mines > 0) {
+                    // Distinct color for numbers
+                    uint32_t fg_color;
+                    switch (cell->adjacent_mines) {
+                        case 1: fg_color = 0x0000FF; break; // Blue
+                        case 2: fg_color = 0x008000; break; // Green
+                        case 3: fg_color = 0xFF0000; break; // Red
+                        case 4: fg_color = 0x000080; break; // Navy
+                        case 5: fg_color = 0x800000; break; // Maroon
+                        case 6: fg_color = 0x00FFFF; break; // Cyan 
+                        case 7: fg_color = 0x800080; break; // Purple
+                        case 8: fg_color = 0x808080; break; // Grey
+                        default: fg_color = 0xFFFFFF; break; // White
+                    }
+                    ncplane_set_fg_rgb(stdn, fg_color);
+                    ncplane_printf_yx(stdn, screen_y, screen_x, " %d", cell->adjacent_mines);
+                } else {
+                    ncplane_printf_yx(stdn, screen_y, screen_x, " ");
+                }
+            } else {
+                if (cell->is_flagged) {
+                    ncplane_set_fg_rgb(stdn, 0xFFA500); //Orange Flag
+                    ncplane_printf_yx(stdn, screen_y, screen_x, " F");
+                } else {
+                    ncplane_set_fg_rgb(stdn, 0xFFFFFF);
+                    ncplane_printf_yx(stdn, screen_y, screen_x, " .");
+                }
+            }
+            ncplane_set_bg_default(stdn);
+            ncplane_set_fg_defautl(stdn);
+        }
+    }
+
+    ncplane_putstr_yx(stdn, (int)dimy - 1, 0, "WASD/Arrows to move, F to flag, C to clear, or Q to quit.");
+
+    notcurses_render(nc);
+}
+
