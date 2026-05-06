@@ -513,3 +513,86 @@ void handle_flag(Board *board, int x, int y) {
         board->flagged_count--;
     }
 }
+
+int main(void) {
+    srand(time(NULL));
+    struct notcurses_options opts = {0};
+    opts.flags |= NCOPTION_SUPRESS_BANNERS | NCOPTION_NO_QUIT_SIGHANDLERS;
+    struct notcurses* nc = notcurses_core_init(&opts, NULL);
+    it (nc == NULL) {
+        return EXIT_FAILURE;
+    }
+
+    // Enable Mouse 
+
+    GameConfig config;
+    show_intro_screen(nc, &config);
+
+    Board board;
+    init_board(&board, &config);
+
+    struct ncinput ni;
+    bool quit = false;
+
+    while (!quit) {
+        render_board(nc, &board, &config);
+
+        uint32_t key = notcurses_get_blocking(nc, &ni);
+        if (key == (uint32_t)-1) continue;
+
+        if (key == 'q' || key == 'Q') {
+            quit = true;
+        } else if (!board.game) {
+            if (key == NCKEY_UP || key == 'w' || key == 'W') {
+                if (board.cursor_y > 0) board.cursor_y--;
+            } else if (key == NCKEY_DOWN || key == 's' || key == 'S') {
+                if (board.cursor_y < board.height - 1) board.cursor_y++;
+            } else if (key == NCKEY_LEFT || key == 'a' || key == 'A') {
+                if (board.cursor_x > 0) board.cursor_x--;
+            } else if (key == NCKEY_RIGHT || key == 'd' || key == 'D') {
+                if (board.cursor_x < board.width -1) board.cursor_x++''
+            } else if (key == 'c' || key == 'C' || key == NCKEY_ENTER) {
+                handle_clear(&board, &config, board.cursor_x, board.cursor_y);
+            } else if (key == 'f' || key == 'F') {
+                handle_flag(&board, board.cursor_x, board.cursor_y);
+            } else if (key == NCKEY_BUTTON1) {
+                // Mouse left click : clear
+                int start_y = ((int)ncplane_dim_y(notcurses_stdplane(nc)) - board.height) / 2;
+                int start_x = ((int)ncplane_dim_x(notcurses_stdplane(nc)) - (board.width * 2)) / 2;
+                if (start_y < 2) start_y = 2;
+                if (start_x < 0) start_x = 0;
+
+                int cy = ni.y - start_y;
+                int cx = (ni.x - start_x) /2;
+                if (cx >= 0 && cx < board.width && cy >= 0 && cy < board.height) {
+                    board.cursor_x = cx;
+                    board.cursor_y = cy;
+                    handle_clear(&board, &config, cx, cy);
+                }
+            } else if (key == NCKEY_BUTTON3) {
+                //Mouse click right: flag
+                int start_y = ((int)ncplane_dim_y(notcurses_stdplane(nc)) - board.height) /2;
+                int start_x = ((int)ncplane_dim_x(notcurses_stdplane(nc)) - (board.width * 2)) / 2;
+                if (start_y <2) start_y = 2;
+                if (start_x < 0) start_x = 0;
+
+                int cy = ni.y - start_y;
+                int cx = (ni.x - start_x) / 2;
+                if (cx >= 0 && cx < board.width && cy < board.height) {
+                    board.cursor_x = cx;
+                    board.cursor_y = cy;
+                    handle_flag(&board, cx, cy);
+                }
+            }
+        } else if (board.game_over) {
+            if (key == 'r' || key == 'R') {
+                free_board(&board);
+                init_board(&board, &config);
+            }
+        }
+    }
+
+    free_board(&board);
+    notcurses_stop(nc);
+    return EXIT_SUCCESS;
+}
