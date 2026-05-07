@@ -97,7 +97,7 @@ typedef struct {
  }
 
  /**
-  *@brief Displays the introduction screen and gets user input
+  * @brief Displays the introduction screen and gets user input
   *
   * @param nc The notcurses context
   * @param config The game configuration
@@ -153,6 +153,7 @@ void show_intro_screen(struct notcurses* nc, GameConfig *config) {
 
         uint32_t key = notcurses_get_blocking(nc, &ni);
         if (key == (uint32_t)-1) continue;
+        if (ni.evtype != NCTYPE_PRESS) continue;
 
         if (key == NCKEY_UP || key == 'k') {
             selection = (selection + 2) % 3;
@@ -169,7 +170,7 @@ void show_intro_screen(struct notcurses* nc, GameConfig *config) {
             } else if (selection == 1) {
                 config->variant = (config->variant + 2) % 3;
             }
-        }else if (key == NCKEY_RIGHT || key == '1') {
+        }else if (key == NCKEY_RIGHT || key == 'l') {
             if (selection == 0) {
                 config->size_mode = (config->size_mode + 1) % 4;
                 if (config->size_mode == MODE_CUSTOM) {
@@ -496,7 +497,7 @@ void handle_clear(Board *board, GameConfig *config, int x, int y) {
 }
 
 /** 
- * @brief Hnadle the flag action on a cell
+ * @brief Handle the flag action on a cell
  * 
  * @param board game board
  * @param x X coordinate
@@ -527,6 +528,7 @@ int main(void) {
     }
 
     // Enable Mouse 
+    notcurses_mice_enable(nc, NCMICE_ALL_EVENTS);
 
     GameConfig config;
     show_intro_screen(nc, &config);
@@ -542,6 +544,7 @@ int main(void) {
 
         uint32_t key = notcurses_get_blocking(nc, &ni);
         if (key == (uint32_t)-1) continue;
+        if (ni.evtype != NCTYPE_PRESS) continue;
 
         if (key == 'q' || key == 'Q') {
             quit = true;
@@ -588,7 +591,7 @@ int main(void) {
                 }
             }
         } else if (board.game_over) {
-            if (key == 'r' || key == 'R') {
+            if (key == 'c' || key == 'C') {
                 free_board(&board);
                 init_board(&board, &config);
             }
