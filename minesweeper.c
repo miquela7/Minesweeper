@@ -50,7 +50,7 @@ typedef struct {
     bool is_revealed;        /**< True if the cell has been revealed */
     bool is_flagged;         /**< True if the cell has been flagged */
     int adjacent_mines;      /**< Displayed number of adjacent mines */
-    int actual_adjacent      /**< Actual number of adjacent mines (for Liar) */
+    int actual_adjacent;     /**< Actual number of adjacent mines (for Liar) */
  } Cell;
 
  /**
@@ -78,7 +78,7 @@ typedef struct {
         case MODE_9x9_10:
             config->width = 9;
             config->height = 9;
-            config->total_mines = 10
+            config->total_mines = 10;
             break;
         case MODE_16x16_40:
             config->width = 16;
@@ -120,7 +120,7 @@ void show_intro_screen(struct notcurses* nc, GameConfig *config) {
 
         ncplane_putstr_yx(stdn, 2, (dimx - 11) / 2, "MINESWEEPER");
 
-        ncplane_putstr_yx(stdn, 4, 4, selection == 0 ? ">Size Mode: ");
+        ncplane_putstr_yx(stdn, 4, 4, selection == 0 ? "> Size Mode: " : " Size Mode: ");
         const char *size_str = "";
         switch (config->size_mode) {
             case MODE_9x9_10: size_str = "9x9 (10 Mines)"; break;
@@ -139,7 +139,7 @@ void show_intro_screen(struct notcurses* nc, GameConfig *config) {
 
         ncplane_putstr_yx(stdn, y_offset, 4, selection == 1 ? ">Variant: " : " Variant: ");
         const char *var_str = "";
-        switch (config0>variant) {
+        switch (config->variant) {
             case VARIANT_NORMAL: var_str = "Normal"; break;
             case VARIANT_CHECKERBOARD: var_str = "Checkerboard"; break;
             case VARIANT_LIAR: var_str = "The Liar"; break;
@@ -151,7 +151,7 @@ void show_intro_screen(struct notcurses* nc, GameConfig *config) {
 
         notcurses_render(nc);
 
-        uint32_t key = notcurses_get_blockomg(nc, &ni);
+        uint32_t key = notcurses_get_blocking(nc, &ni);
         if (key == (uint32_t)-1) continue;
 
         if (key == NCKEY_UP || key == 'k') {
@@ -190,7 +190,7 @@ void show_intro_screen(struct notcurses* nc, GameConfig *config) {
             if (key == 'a' && config->height > 5) config->height--;
             if (key == 's' && config->height < (int)dimy - 4) config->height++; // Approximate max height
             if (key == 'z' && config->total_mines > 1) config->total_mines--;
-            if (key == 'x' && config->total_mines < 1000 && config->total_mines < config->widght * config->height - 1) config->total_mines++
+            if (key == 'x' && config->total_mines < 1000 && config->total_mines < config->width * config->height - 1) config->total_mines++;
         }
     }
     apply_size_mode(config);
@@ -304,7 +304,7 @@ void calculate_adjacent_mines(Board *board, GameConfig *config) {
  * @param first_click_x X coordinate of the first click
  * @param first_click_y Y coordinate of the first click
  */
-void place_mines(Board *board, GameConfig *confi, int first_click_x, int first_click_y) {
+void place_mines(Board *board, GameConfig *config, int first_click_x, int first_click_y) {
     int mines_to_place = board->total_mines;
 
     //Ensure the placement of mines on valid cells
@@ -324,7 +324,7 @@ void place_mines(Board *board, GameConfig *confi, int first_click_x, int first_c
             continue;
         }
 
-        if (!board->grid[y][x].is_mines) {
+        if (!board->grid[y][x].is_mine) {
             board->grid[y][x].is_mine = true;
             mines_to_place--;
         }
@@ -385,7 +385,7 @@ void render_board(struct notcurses *nc, Board *board, GameConfig *config) {
 
             ncplane_set_bg_rgb(stdn, bg_color);
 
-            if (cell->is_revealed || (board->game_over && cell->is_mines)) {
+            if (cell->is_revealed || (board->game_over && cell->is_mine)) {
                 if (cell->is_mine) {
                     ncplane_set_fg_rgb(stdn, 0xFF0000); //Red bomb
                     ncplane_printf_yx(stdn, screen_y, screen_x, " *");
@@ -418,7 +418,7 @@ void render_board(struct notcurses *nc, Board *board, GameConfig *config) {
                 }
             }
             ncplane_set_bg_default(stdn);
-            ncplane_set_fg_defautl(stdn);
+            ncplane_set_fg_default(stdn);
         }
     }
 
@@ -477,15 +477,18 @@ void handle_clear(Board *board, GameConfig *config, int x, int y) {
     if (x < 0 || x >= board->width || y < 0 || y >= board->height) return;
     if (board->game_over) return;
 
+    Cell *cell = &board->grid[y][x];
+    if (cell->is_flagged) return;
+
     if (board->first_click) {
         board->first_click = false;
         place_mines(board, config, x, y);
     }
     
-    if (cell->is_mines) {
+    if (cell->is_mine) {
         board->game_over = true;
         board->victory = false;
-        cell->is_revealed = true // Show the bomb that ended the game
+        cell->is_revealed = true; // Show the bomb that ended the game
     } else if (!cell->is_revealed) {
         reveal_empty_cells(board, x, y);
         check_win_condition(board); 
@@ -501,7 +504,7 @@ void handle_clear(Board *board, GameConfig *config, int x, int y) {
  */
 void handle_flag(Board *board, int x, int y) {
     if (x < 0 || x >= board->width || y < 0 || y >= board->height) return;
-    if (board->game_board) return; 
+    if (board->game_over) return; 
 
     Cell *cell= &board-> grid[y][x];
     if (cell->is_revealed) return;
@@ -517,9 +520,9 @@ void handle_flag(Board *board, int x, int y) {
 int main(void) {
     srand(time(NULL));
     struct notcurses_options opts = {0};
-    opts.flags |= NCOPTION_SUPRESS_BANNERS | NCOPTION_NO_QUIT_SIGHANDLERS;
+    opts.flags |= NCOPTION_SUPPRESS_BANNERS | NCOPTION_NO_QUIT_SIGHANDLERS;
     struct notcurses* nc = notcurses_core_init(&opts, NULL);
-    it (nc == NULL) {
+    if (nc == NULL) {
         return EXIT_FAILURE;
     }
 
@@ -542,7 +545,7 @@ int main(void) {
 
         if (key == 'q' || key == 'Q') {
             quit = true;
-        } else if (!board.game) {
+        } else if (!board.game_over) {
             if (key == NCKEY_UP || key == 'w' || key == 'W') {
                 if (board.cursor_y > 0) board.cursor_y--;
             } else if (key == NCKEY_DOWN || key == 's' || key == 'S') {
@@ -550,7 +553,7 @@ int main(void) {
             } else if (key == NCKEY_LEFT || key == 'a' || key == 'A') {
                 if (board.cursor_x > 0) board.cursor_x--;
             } else if (key == NCKEY_RIGHT || key == 'd' || key == 'D') {
-                if (board.cursor_x < board.width -1) board.cursor_x++''
+                if (board.cursor_x < board.width -1) board.cursor_x++;
             } else if (key == 'c' || key == 'C' || key == NCKEY_ENTER) {
                 handle_clear(&board, &config, board.cursor_x, board.cursor_y);
             } else if (key == 'f' || key == 'F') {
