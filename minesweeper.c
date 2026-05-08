@@ -569,7 +569,7 @@ int main(void) {
                 if (start_x < 0) start_x = 0;
 
                 int cy = ni.y - start_y;
-                int cx = (ni.x - start_x + 2) / 3;
+                int cx = (ni.x - start_x - 3) / 2;
                 if (cx >= 0 && cx < board.width && cy >= 0 && cy < board.height) {
                     board.cursor_x = cx;
                     board.cursor_y = cy;
@@ -583,7 +583,7 @@ int main(void) {
                 if (start_x < 0) start_x = 0;
 
                 int cy = ni.y - start_y;
-                int cx = (ni.x - start_x + 2) / 3;
+                int cx = (ni.x - start_x - 3) / 2;
                 if (cx >= 0 && cx < board.width && cy < board.height) {
                     board.cursor_x = cx;
                     board.cursor_y = cy;
