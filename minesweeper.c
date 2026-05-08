@@ -569,7 +569,7 @@ int main(void) {
                 if (start_x < 0) start_x = 0;
 
                 int cy = ni.y - start_y;
-                int cx = (ni.x - start_x) /2;
+                int cx = (ni.x - start_x + 2) / 3;
                 if (cx >= 0 && cx < board.width && cy >= 0 && cy < board.height) {
                     board.cursor_x = cx;
                     board.cursor_y = cy;
@@ -577,13 +577,13 @@ int main(void) {
                 }
             } else if (key == NCKEY_BUTTON3) {
                 //Mouse click right: flag
-                int start_y = ((int)ncplane_dim_y(notcurses_stdplane(nc)) - board.height) /2;
+                int start_y = ((int)ncplane_dim_y(notcurses_stdplane(nc)) - board.height) / 2;
                 int start_x = ((int)ncplane_dim_x(notcurses_stdplane(nc)) - (board.width * 2)) / 2;
-                if (start_y <2) start_y = 2;
+                if (start_y < 2) start_y = 2;
                 if (start_x < 0) start_x = 0;
 
                 int cy = ni.y - start_y;
-                int cx = (ni.x - start_x) / 2;
+                int cx = (ni.x - start_x + 2) / 3;
                 if (cx >= 0 && cx < board.width && cy < board.height) {
                     board.cursor_x = cx;
                     board.cursor_y = cy;
