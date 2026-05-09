@@ -15,4 +15,10 @@ May 6, 2026
 
 May 7, 2026
 
-    I fixed the errors in my code and ran the program to test what my game turned out to be. 
+    I fixed the errors in my code and ran the program to test what my game turned out to be. Found problem within my mouse curser. I would click on a space and a spot 2 cells down would reveal. 
+
+May 8, 2026
+    I tried to fix my mouse problem and ultimately was able to with lots of trial and error. I completed my reflections.md. 
+
+May 9, 2026
+    Made sure all of my code worked and completed the README file. Turned in final project
